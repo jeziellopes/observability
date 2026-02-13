@@ -69,7 +69,8 @@ app.get('/api/users', async (req: Request, res: Response) => {
     const response = await axios.get(`${USER_SERVICE_URL}/users`);
     res.json(response.data);
   } catch (error) {
-    console.error('Error calling user service:', error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error calling user service:', errorMessage);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
@@ -79,9 +80,11 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
     const response = await axios.get(`${USER_SERVICE_URL}/users/${req.params.id}`);
     res.json(response.data);
   } catch (error) {
-    console.error('Error calling user service:', error.message);
-    res.status(error.response?.status || 500).json({ 
-      error: error.response?.data?.error || 'Failed to fetch user' 
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error calling user service:', errorMessage);
+    const axiosError = error as any;
+    res.status(axiosError.response?.status || 500).json({ 
+      error: axiosError.response?.data?.error || 'Failed to fetch user' 
     });
   }
 });
@@ -91,7 +94,8 @@ app.post('/api/users', async (req: Request, res: Response) => {
     const response = await axios.post(`${USER_SERVICE_URL}/users`, req.body);
     res.status(201).json(response.data);
   } catch (error) {
-    console.error('Error calling user service:', error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error calling user service:', errorMessage);
     res.status(500).json({ error: 'Failed to create user' });
   }
 });
@@ -102,7 +106,8 @@ app.get('/api/orders', async (req: Request, res: Response) => {
     const response = await axios.get(`${ORDER_SERVICE_URL}/orders`);
     res.json(response.data);
   } catch (error) {
-    console.error('Error calling order service:', error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error calling order service:', errorMessage);
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 });
@@ -112,9 +117,11 @@ app.get('/api/orders/:id', async (req: Request, res: Response) => {
     const response = await axios.get(`${ORDER_SERVICE_URL}/orders/${req.params.id}`);
     res.json(response.data);
   } catch (error) {
-    console.error('Error calling order service:', error.message);
-    res.status(error.response?.status || 500).json({ 
-      error: error.response?.data?.error || 'Failed to fetch order' 
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error calling order service:', errorMessage);
+    const axiosError = error as any;
+    res.status(axiosError.response?.status || 500).json({ 
+      error: axiosError.response?.data?.error || 'Failed to fetch order' 
     });
   }
 });
@@ -124,7 +131,8 @@ app.post('/api/orders', async (req: Request, res: Response) => {
     const response = await axios.post(`${ORDER_SERVICE_URL}/orders`, req.body);
     res.status(201).json(response.data);
   } catch (error) {
-    console.error('Error calling order service:', error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error calling order service:', errorMessage);
     res.status(500).json({ error: 'Failed to create order' });
   }
 });

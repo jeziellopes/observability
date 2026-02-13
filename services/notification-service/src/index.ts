@@ -42,7 +42,7 @@ interface Notification {
 const app = express();
 const PORT = process.env.PORT || 3003;
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
-const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379');
+const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6382');
 
 app.use(express.json());
 
@@ -138,7 +138,8 @@ async function simulateNotificationSending(notification: Notification, span: any
   const tracer = trace.getTracer('notification-service');
   
   return new Promise((resolve) => {
-    const sendSpan = tracer.startSpan('send-notification', { parent: span });
+    const ctx = trace.setSpan(context.active(), span);
+    const sendSpan = tracer.startSpan('send-notification', {}, ctx);
     
     sendSpan.setAttribute('notification.channel', 'email');
     sendSpan.addEvent('Sending email notification');

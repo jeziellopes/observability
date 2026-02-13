@@ -44,7 +44,7 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:3001';
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
-const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379');
+const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6382');
 
 app.use(express.json());
 
@@ -130,10 +130,11 @@ app.get('/orders/:id', async (req: Request, res: Response) => {
     span.end();
     res.json(enrichedOrder);
   } catch (error) {
-    span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
-    span.recordException(error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
+    span.recordException(error instanceof Error ? error : new Error(String(error)));
     span.end();
-    console.error('Error fetching order:', error.message);
+    console.error('Error fetching order:', errorMessage);
     res.status(500).json({ error: 'Failed to fetch order details' });
   }
 });
@@ -207,14 +208,18 @@ app.post('/orders', async (req: Request, res: Response) => {
     span.end();
     res.status(201).json(newOrder);
   } catch (error) {
-    span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
-    span.recordException(error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
+    span.recordException(error instanceof Error ? error : new Error(String(error)));
     span.end();
     
-    console.error('Error creating order:', error.message);
+    console.error('Error creating order:', errorMessage);
     
-    if (error.response?.status === 404) {
-      return res.status(404).json({ error: 'User not found' });
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as any;
+      if (axiosError.response?.status === 404) {
+        return res.status(404).json({ error: 'User not found' });
+      }
     }
     
     res.status(500).json({ error: 'Failed to create order' });
