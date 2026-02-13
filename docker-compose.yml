@@ -97,7 +97,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
       - USER_SERVICE_URL=http://user-service:3001
       - REDIS_HOST=redis
-      - REDIS_PORT=6382
+      - REDIS_PORT=6379
     depends_on:
       - jaeger
       - redis
@@ -124,7 +124,7 @@ services:
       - OTEL_SERVICE_NAME=notification-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
       - REDIS_HOST=redis
-      - REDIS_PORT=6382
+      - REDIS_PORT=6379
     depends_on:
       - jaeger
       - redis
