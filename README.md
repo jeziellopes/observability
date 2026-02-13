@@ -12,6 +12,10 @@ This project showcases:
 - **Container Orchestration** - Docker Compose for local dev, ECS Fargate for production
 - **Infrastructure as Code** - Terraform for AWS deployment
 
+## 🧪 Demonstration
+
+![Screen](./sample.png)
+
 ## 📊 Architecture
 
 ```
