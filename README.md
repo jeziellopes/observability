@@ -1,16 +1,19 @@
 # Observability Demo - Microservices with OpenTelemetry
 
-A portfolio project demonstrating distributed tracing and observability using OpenTelemetry, microservices, Docker, and Terraform on AWS.
+A portfolio project demonstrating the three pillars of observability — **traces, metrics, and logs** — across a distributed microservices system using OpenTelemetry, Prometheus, Grafana, and Jaeger on AWS.
 
 ## 🎯 Project Overview
 
 This project showcases:
 - **Microservices Architecture** - 4 TypeScript services with REST APIs
-- **Distributed Tracing** - OpenTelemetry instrumentation across all services
-- **Async Processing** - Redis queue with trace context propagation
-- **Serverless Integration** - AWS Lambda with tracing
+- **Distributed Tracing** - OpenTelemetry instrumentation across all services, visualized in Jaeger
+- **Metrics Collection** *(in progress)* - Prometheus scraping all services + Grafana dashboards
+- **Async Trace Propagation** - Trace context manually serialized through Redis queue boundaries
+- **Serverless + Container Tracing** - Single unbroken trace spanning AWS Lambda and ECS services
 - **Container Orchestration** - Docker Compose for local dev, ECS Fargate for production
 - **Infrastructure as Code** - Terraform for AWS deployment
+
+> **💡 Key Challenge**: Keeping a trace alive across async boundaries. HTTP propagation is automatic via OpenTelemetry — but when a message enters a Redis queue, context would be lost. The solution: manually serialize the trace context into the message payload and restore it on the consumer side, maintaining a single trace across the entire flow.
 
 ## 🧪 Demonstration
 
@@ -18,45 +21,38 @@ This project showcases:
 
 ## 📊 Architecture
 
-```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │
-       v
-┌─────────────────┐
-│  API Gateway    │──────────────┐
-│   (Port 3000)   │              │
-└────────┬────────┘              │
-         │                       │
-    ┌────┴────┐                  │
-    │         │                  │
-    v         v                  v
-┌─────────┐ ┌─────────┐    ┌─────────┐
-│  User   │ │  Order  │    │ Lambda  │
-│ Service │ │ Service │    │Validator│
-│  :3001  │ │  :3002  │    └─────────┘
-└─────────┘ └────┬────┘
-                 │
-                 v
-            ┌─────────┐
-            │  Redis  │
-            │  Queue  │
-            └────┬────┘
-                 │
-                 v
-          ┌─────────────┐
-          │Notification │
-          │   Service   │
-          │    :3003    │
-          └─────────────┘
-                 │
-                 v
-          ┌─────────────┐
-          │   Jaeger    │
-          │ (Tracing UI)│
-          │   :16686    │
-          └─────────────┘
+```mermaid
+graph TB
+    Client([Client])
+    APIGateway[API Gateway<br/>Port 3000]
+    UserService[User Service<br/>Port 3001]
+    OrderService[Order Service<br/>Port 3002]
+    Lambda[Lambda Validator<br/>AWS Lambda]
+    Redis[(Redis Queue)]
+    NotificationService[Notification Service<br/>Port 3003]
+    Jaeger[Jaeger UI<br/>Port 16686]
+
+    Client -->|HTTP Request| APIGateway
+    APIGateway -->|REST API| UserService
+    APIGateway -->|REST API| OrderService
+    APIGateway -->|Invoke| Lambda
+    OrderService -->|Publish Message| Redis
+    Redis -->|Consume Message| NotificationService
+    
+    UserService -.->|Traces| Jaeger
+    OrderService -.->|Traces| Jaeger
+    NotificationService -.->|Traces| Jaeger
+    Lambda -.->|Traces| Jaeger
+    APIGateway -.->|Traces| Jaeger
+
+    style Client fill:#e1f5ff30
+    style APIGateway fill:#bbdefb30
+    style UserService fill:#c8e6c930
+    style OrderService fill:#c8e6c930
+    style NotificationService fill:#c8e6c930
+    style Lambda fill:#fff9c430
+    style Redis fill:#ffccbc30
+    style Jaeger fill:#f8bbd030
 ```
 
 ## 🚀 Quick Start
@@ -129,10 +125,41 @@ observability/
 
 ## 🔍 Observability Features
 
+### The Three Pillars
+
+| Pillar | Tool | What it covers |
+|--------|------|----------------|
+| **Traces** | Jaeger + OpenTelemetry | End-to-end request flow across all services |
+| **Metrics** | Prometheus + Grafana *(in progress)* | Request rate, duration, error rate per service |
+| **Logs** | Console + CloudWatch | Structured logs with trace correlation |
+
+### Distributed Trace Propagation
+
+- 📡 **HTTP Auto-instrumentation** - OpenTelemetry SDK injects/extracts context automatically on all Express & Axios calls
+- 🔄 **Async Queue (the hard part)** - Trace context manually serialized into Redis message payload and restored on the consumer side
+- ⚡ **Serverless** - Same trace continues into AWS Lambda invocations
+- 🔗 **Single trace ID** spans HTTP services, async queue, and Lambda in one Jaeger view
+
+**How it works:**
+```typescript
+// API Gateway → Order Service (automatic via headers)
+await axios.get(ORDER_SERVICE_URL);  // ← traceparent header injected automatically
+
+// Order Service → Redis → Notification Service (manual for async)
+const carrier = {};
+propagation.inject(context.active(), carrier);  // Extract context
+await redis.lPush('queue', JSON.stringify({ ...data, traceContext: carrier }));
+
+// Notification Service extracts and continues trace
+const ctx = propagation.extract(ROOT_CONTEXT, message.traceContext);
+```
+
+The async queue boundary is where trace context propagation gets non-trivial — and where the real understanding happens.
+
 ### OpenTelemetry Instrumentation
 - **Automatic**: HTTP requests, database calls, Redis operations
-- **Manual**: Custom business logic spans
-- **Context Propagation**: Traces flow across service boundaries and queues
+- **Manual**: Custom business logic spans and events
+- **Context Propagation**: Traces flow across service boundaries, queues, and Lambda
 
 ### Trace Scenarios
 1. **API Gateway → User Service** - Simple request flow
@@ -258,17 +285,15 @@ POST /api/orders
 }
 ```
 
-## 🎓 Learning Outcomes
+## 🎓 Technical Stack & Features
 
-This project demonstrates:
-- TypeScript in production microservices
-- OpenTelemetry SDK integration
-- Distributed tracing patterns
-- Service-to-service communication
-- Async messaging with trace context
-- Container orchestration
-- Infrastructure as Code
-- Serverless observability
+- **OpenTelemetry** as the single vendor-neutral instrumentation layer
+- **Traces** (Jaeger) + **Metrics** (Prometheus/Grafana, in progress) + **Logs** — all three pillars
+- **Async trace context propagation** — manual serialization through Redis queue boundaries
+- **Cross-environment tracing** — same trace across ECS containers and AWS Lambda
+- TypeScript microservices with auto-instrumentation
+- Container orchestration (Docker Compose + ECS Fargate)
+- Infrastructure as Code (Terraform)
 
 ## 📝 Documentation
 
@@ -309,14 +334,6 @@ terraform destroy
 - Basic security groups
 - No WAF or DDoS protection
 
-For production:
-- Add AWS WAF
-- Use HTTPS with ACM certificates
-- Implement AWS Secrets Manager
-- Add API authentication (JWT, API keys)
-- Enable VPC Flow Logs
-- Implement proper IAM policies
-
 ## 🤝 Contributing
 
 This is a portfolio project, but feedback is welcome!
@@ -327,10 +344,10 @@ MIT
 
 ## 🙋 Contact
 
-Portfolio project by [Your Name]
-- GitHub: [your-github]
-- LinkedIn: [your-linkedin]
+Portfolio project by Jeziel Lopes
+- Email: [jeziellcarvalho@gmail.com](mailto:jeziellcarvalho@gmail.com)
+- LinkedIn: [https://linkedin.com/in/jezielcarvalho](https://linkedin.com/in/jezielcarvalho)
 
 ---
 
-**Built with**: TypeScript • Node.js • Express • OpenTelemetry • Jaeger • Redis • Docker • AWS ECS • Lambda • Terraform
+**Built with**: OpenTelemetry • TypeScript • Node.js • Express • Jaeger • Prometheus • Grafana • Redis • Docker • AWS ECS • Lambda • Terraform
