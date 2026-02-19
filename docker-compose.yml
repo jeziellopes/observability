@@ -96,6 +96,7 @@ services:
       - OTEL_SERVICE_NAME=order-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
       - USER_SERVICE_URL=http://user-service:3001
+      - QUEUE_TRANSPORT=redis   # switch to 'sqs' for AWS deployment
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
@@ -123,6 +124,7 @@ services:
       - NODE_ENV=development
       - OTEL_SERVICE_NAME=notification-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - QUEUE_TRANSPORT=redis   # switch to 'sqs' for AWS deployment
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
