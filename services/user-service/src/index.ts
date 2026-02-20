@@ -8,8 +8,11 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
+
+const prometheusExporter = new PrometheusExporter({ preventServerStart: true });
 
 const sdk = new NodeSDK({
   resource: new Resource({
@@ -19,6 +22,7 @@ const sdk = new NodeSDK({
   traceExporter: new OTLPTraceExporter({
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://jaeger:4318/v1/traces',
   }),
+  metricReader: prometheusExporter,
   instrumentations: [getNodeAutoInstrumentations()],
 });
 
@@ -26,7 +30,19 @@ sdk.start();
 
 // Now import application modules
 import express, { Request, Response, NextFunction } from 'express';
-import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { trace, SpanStatusCode, metrics } from '@opentelemetry/api';
+import { createLogger } from '../../shared/logger';
+
+const logger = createLogger('user-service');
+
+// --- Business metrics ---
+const meter = metrics.getMeter('user-service');
+const usersCreated = meter.createCounter('users_created_total', {
+  description: 'Total number of users created',
+});
+const userErrors = meter.createCounter('users_errors_total', {
+  description: 'Total number of user operation errors',
+});
 
 interface User {
   id: number;
@@ -40,6 +56,11 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
+
+// Prometheus metrics endpoint
+app.get('/metrics', (req: Request, res: Response) => {
+  prometheusExporter.getMetricsRequestHandler(req as any, res as any);
+});
 
 // In-memory user store (mock database)
 const users = new Map<number, User>([
@@ -108,6 +129,7 @@ app.post('/users', (req: Request, res: Response) => {
   
   // Validation
   if (!name || !email) {
+    userErrors.add(1, { reason: 'validation' });
     span.setStatus({ code: SpanStatusCode.ERROR, message: 'Missing required fields' });
     span.setAttribute('error', true);
     span.addEvent('Validation failed', { name: !!name, email: !!email });
@@ -129,11 +151,13 @@ app.post('/users', (req: Request, res: Response) => {
     };
     
     users.set(newUser.id, newUser);
+    usersCreated.add(1);
     
     span.setAttribute('user.id', newUser.id);
     span.addEvent('User created successfully', { userId: newUser.id });
     span.end();
     
+    logger.info('User created', { userId: newUser.id, name: newUser.name });
     res.status(201).json(newUser);
   }, 80);
 });
@@ -193,14 +217,13 @@ app.delete('/users/:id', (req: Request, res: Response) => {
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('Unhandled error:', err);
+  logger.error('Unhandled error', { error: err.message, stack: err.stack });
   res.status(500).json({ error: 'Internal server error' });
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`User Service listening on port ${PORT}`);
-  console.log(`Initial users loaded: ${users.size}`);
+  logger.info(`User Service listening on port ${PORT}`, { initialUsers: users.size });
 });
 
 // Graceful shutdown

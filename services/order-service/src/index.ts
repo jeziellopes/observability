@@ -8,8 +8,11 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
+
+const prometheusExporter = new PrometheusExporter({ preventServerStart: true });
 
 const sdk = new NodeSDK({
   resource: new Resource({
@@ -19,6 +22,7 @@ const sdk = new NodeSDK({
   traceExporter: new OTLPTraceExporter({
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://jaeger:4318/v1/traces',
   }),
+  metricReader: prometheusExporter,
   instrumentations: [getNodeAutoInstrumentations()],
 });
 
@@ -27,8 +31,25 @@ sdk.start();
 // Now import application modules
 import express, { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
-import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { trace, SpanStatusCode, metrics } from '@opentelemetry/api';
 import { createQueueTransport, injectTraceContext, IQueueTransport } from '../../shared/queue';
+import { createLogger } from '../../shared/logger';
+
+const logger = createLogger('order-service');
+
+// --- Business metrics ---
+const meter = metrics.getMeter('order-service');
+const ordersCreated = meter.createCounter('orders_created_total', {
+  description: 'Total number of orders created',
+});
+const ordersErrors = meter.createCounter('orders_errors_total', {
+  description: 'Total number of order creation errors',
+});
+const orderValue = meter.createHistogram('order_value', {
+  description: 'Distribution of order values in USD',
+  unit: 'USD',
+  boundaries: [10, 25, 50, 100, 250, 500, 1000],
+});
 
 interface Order {
   id: number;
@@ -45,6 +66,11 @@ const PORT = process.env.PORT || 3002;
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://localhost:3001';
 
 app.use(express.json());
+
+// Prometheus metrics endpoint
+app.get('/metrics', (req: Request, res: Response) => {
+  prometheusExporter.getMetricsRequestHandler(req as any, res as any);
+});
 
 let queue: IQueueTransport;
 
@@ -159,6 +185,8 @@ app.post('/orders', async (req: Request, res: Response) => {
     };
     
     orders.set(newOrder.id, newOrder);
+    ordersCreated.add(1, { status: 'success' });
+    orderValue.record(total);
     
     span.setAttribute('order.id', newOrder.id);
     span.addEvent('Order created successfully');
@@ -181,14 +209,16 @@ app.post('/orders', async (req: Request, res: Response) => {
     }
     
     span.end();
+    logger.info('Order created', { orderId: newOrder.id, userId, total });
     res.status(201).json(newOrder);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
     span.recordException(error instanceof Error ? error : new Error(String(error)));
     span.end();
+    ordersErrors.add(1);
     
-    console.error('Error creating order:', errorMessage);
+    logger.error('Error creating order', { error: errorMessage });
     
     if (error && typeof error === 'object' && 'response' in error) {
       const axiosError = error as any;
@@ -232,15 +262,16 @@ app.patch('/orders/:id/status', (req: Request, res: Response) => {
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('Unhandled error:', err);
+  logger.error('Unhandled error', { error: err.message, stack: err.stack });
   res.status(500).json({ error: 'Internal server error' });
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Order Service listening on port ${PORT}`);
-  console.log(`User Service URL: ${USER_SERVICE_URL}`);
-  console.log(`Queue transport: ${process.env.QUEUE_TRANSPORT || 'redis'}`);
+  logger.info(`Order Service listening on port ${PORT}`, {
+    userServiceUrl: USER_SERVICE_URL,
+    queueTransport: process.env.QUEUE_TRANSPORT || 'redis',
+  });
 });
 
 // Graceful shutdown
