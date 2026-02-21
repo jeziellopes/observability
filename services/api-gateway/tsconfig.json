@@ -1,9 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": ".."
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../shared/logger/**/*"],
   "exclude": ["node_modules", "dist"]
 }
