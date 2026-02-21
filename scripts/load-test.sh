@@ -405,6 +405,10 @@ echo "║  Prometheus: http://localhost:9090                       ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo -e "${RESET}"
 
+# --- Optional start delay ---------------------------------------------------
+log_info "Waiting 3 seconds before starting test..."
+sleep 3
+
 # Optionally clean the stack before the test run
 $DO_CLEAN && do_cleanup
 
