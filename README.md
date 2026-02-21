@@ -11,7 +11,8 @@ Covers distributed tracing across HTTP services, async queue boundaries, and ser
 | Layer | Technology |
 |-------|-----------|
 | Tracing | OpenTelemetry + Jaeger |
-| Metrics | Prometheus + Grafana *(in progress)* |
+| Metrics | Prometheus + Grafana |
+| Logs | Winston + trace correlation |
 | Services | TypeScript + Express (×4) + AWS Lambda |
 | Queue | AWS SQS (production) / Redis (local dev) |
 | Infra | Terraform + ECS Fargate + Docker Compose |
@@ -30,6 +31,8 @@ graph TB
     Queue[(Queue Transport<br/>Redis local / SQS on AWS)]
     NotificationService[Notification Service<br/>Port 3003]
     Jaeger[Jaeger UI<br/>Port 16686]
+    Prometheus[Prometheus<br/>Port 9090]
+    Grafana[Grafana<br/>Port 3100]
 
     Client -->|HTTP Request| APIGateway
     APIGateway -->|REST API| UserService
@@ -38,11 +41,18 @@ graph TB
     OrderService -->|Publish + traceContext| Queue
     Queue -->|Consume + extract traceContext| NotificationService
 
-    UserService -.->|Traces| Jaeger
-    OrderService -.->|Traces| Jaeger
-    NotificationService -.->|Traces| Jaeger
+    UserService -.->|Traces + Metrics| Jaeger
+    OrderService -.->|Traces + Metrics| Jaeger
+    NotificationService -.->|Traces + Metrics| Jaeger
     Lambda -.->|Traces| Jaeger
-    APIGateway -.->|Traces| Jaeger
+    APIGateway -.->|Traces + Metrics| Jaeger
+
+    Prometheus -->|Scrape /metrics| APIGateway
+    Prometheus -->|Scrape /metrics| UserService
+    Prometheus -->|Scrape /metrics| OrderService
+    Prometheus -->|Scrape /metrics| NotificationService
+    Prometheus -->|Scrape metrics| Jaeger
+    Grafana -->|Query| Prometheus
 
     style Client fill:#e1f5ff30
     style APIGateway fill:#bbdefb30
@@ -52,7 +62,49 @@ graph TB
     style Lambda fill:#fff9c430
     style Queue fill:#ffccbc30
     style Jaeger fill:#f8bbd030
+    style Prometheus fill:#ffe0b230
+    style Grafana fill:#e8f5e930
 ```
+
+---
+
+## Observability Pillars
+
+### Traces (Jaeger)
+Every HTTP hop and queue boundary is captured. View end-to-end traces at `http://localhost:16686`. See [Trace Propagation](#trace-propagation) below.
+
+### Metrics (Prometheus + Grafana)
+All four services expose a `/metrics` endpoint (Prometheus text format) via `@opentelemetry/exporter-prometheus` wired into the OTel SDK's `metricReader`. Jaeger's Service Performance Monitoring (SPM) is enabled with Prometheus as its backend, showing RED metrics (Rate, Errors, Duration) per service directly in the Jaeger UI.
+
+**Built-in OTel metrics** (HTTP server duration, request count, active requests) are captured automatically via auto-instrumentation.
+
+**Custom business metrics** per service:
+
+| Metric | Service | Type |
+|--------|---------|------|
+| `gateway_requests_total` | api-gateway | Counter |
+| `gateway_errors_total` | api-gateway | Counter |
+| `users_created_total` | user-service | Counter |
+| `orders_created_total` | order-service | Counter |
+| `orders_errors_total` | order-service | Counter |
+| `order_value` | order-service | Histogram |
+| `notifications_sent_total` | notification-service | Counter |
+| `notifications_failed_total` | notification-service | Counter |
+| `notification_processing_duration_ms` | notification-service | Histogram |
+
+Grafana at `http://localhost:3100` loads a pre-configured dashboard with RED metrics, latency percentiles (p50/p95/p99), and business metric stat panels. Credentials: `admin / admin`.
+
+### Logs (Winston)
+All services use a shared `createLogger(serviceName)` factory from `services/shared/logger`. Every log record is emitted as structured JSON and automatically includes the active span's `traceId` and `spanId`, enabling log–trace correlation in any log aggregation backend (Loki, ELK, CloudWatch).
+
+```json
+{ "level": "info", "message": "Order created", "service": "order-service",
+  "traceId": "4bf92f...", "spanId": "00f067...", "orderId": 3, "total": 49.99 }
+```
+
+Set `LOG_LEVEL=debug` (default: `info`) to increase verbosity.
+
+> **Sampling note**: this demo uses the default "always on" sampler — suitable for low-traffic demos. For production, use `ParentBasedSampler` with a `TraceIdRatioBased` sub-sampler (e.g. 10%) to control trace volume and instrumentation overhead.
 
 ---
 
@@ -135,7 +187,7 @@ curl -X POST http://localhost:3000/api/orders \
 open http://localhost:16686
 ```
 
-Service ports: API Gateway `:3000` · User `:3001` · Order `:3002` · Notification `:3003` · Jaeger UI `:16686`
+Service ports: API Gateway `:3000` · User `:3001` · Order `:3002` · Notification `:3003` · Jaeger UI `:16686` · Prometheus `:9090` · Grafana `:3100` (admin/admin)
 
 ---
 
@@ -149,9 +201,12 @@ observability/
 │   ├── order-service/        # Order processing + queue publish
 │   └── notification-service/ # Queue consumer
 ├── services/shared/queue/    # IQueueTransport, RedisTransport, SQSTransport
+├── services/shared/logger/   # Winston logger with trace context injection
 ├── lambda/                   # Order validator (AWS Lambda)
 ├── infrastructure/terraform/ # ECS, Lambda, SQS, networking
-├── configs/                  # Shared OpenTelemetry config
+├── configs/                  # Prometheus, Grafana provisioning, OTel config
+│   ├── prometheus.yml
+│   └── grafana/              # datasources.yml, dashboards.yml, dashboards/
 └── docker-compose.yml
 ```
 
@@ -218,7 +273,7 @@ cd lambda && npm install && npm run build  # → lambda.zip
 ## Notes
 
 - ⚠️ Demo project — no auth, HTTP only, no secret management
-- Prometheus + Grafana dashboards in progress (see [PLAN_MONITORING.md](PLAN_MONITORING.md))
+- Set `LOG_LEVEL=debug` in any service for verbose structured JSON logs
 
 **Documentation**: [PLAN.md](PLAN.md) · [TASKS.md](TASKS.md) · [infrastructure/terraform/README.md](infrastructure/terraform/README.md) · [lambda/README.md](lambda/README.md)
 
