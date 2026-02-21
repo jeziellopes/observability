@@ -16,6 +16,7 @@
     "test:coverage": "jest --coverage"
   },
   "devDependencies": {
+    "@opentelemetry/api": "^1.7.0",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.10.6",
     "@types/winston": "^2.4.4",
