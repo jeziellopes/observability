@@ -74,9 +74,9 @@ stats_line() {
   total=$(cat "$TMPDIR_STATS/total")
   elapsed_s=$(elapsed)
   local remaining_s; remaining_s=$(remaining)
-  local rps=0
-  [[ $elapsed_s -gt 0 ]] && rps=$(echo "scale=1; $total / $elapsed_s" | bc)
-  printf "${BOLD}  Stats: ${GREEN}%d OK${RESET} | ${RED}%d ERR${RESET} | total %d | %.1f req/s | elapsed %dm%ds | remaining %dm%ds${RESET}\n" \
+  local rps="0.0"
+  [[ $elapsed_s -gt 0 ]] && rps=$(awk -v t="$total" -v e="$elapsed_s" 'BEGIN{printf "%.1f", t/e}')
+  printf "${BOLD}  Stats: ${GREEN}%d OK${RESET} | ${RED}%d ERR${RESET} | total %d | %s req/s | elapsed %dm%ds | remaining %dm%ds${RESET}\n" \
     "$ok" "$err" "$total" "$rps" \
     "$((elapsed_s / 60))" "$((elapsed_s % 60))" \
     "$((remaining_s / 60))" "$((remaining_s % 60))"
@@ -125,7 +125,7 @@ seed_data() {
   # Create one order per user
   for uid in "${USER_IDS[@]}"; do
     local items="${ITEMS_POOL[$((RANDOM % ${#ITEMS_POOL[@]}))]}"
-    local total; total=$(echo "scale=2; ($RANDOM % 1500) + 10.$((RANDOM % 99))" | bc)
+    local total; total=$(awk -v r1="$((RANDOM % 1500))" -v r2="$((RANDOM % 99))" 'BEGIN{printf "%.2f", r1 + 10 + r2/100}')
     local body; body=$(req_body POST "$GATEWAY/api/orders" \
       -H "Content-Type: application/json" \
       -d "{\"userId\":$uid,\"items\":$items,\"total\":$total}")
@@ -188,7 +188,7 @@ normal_traffic() {
        if [[ ${#USER_IDS[@]} -gt 0 ]]; then
          local uid="${USER_IDS[$((RANDOM % ${#USER_IDS[@]}))]}"
          local items="${ITEMS_POOL[$((RANDOM % ${#ITEMS_POOL[@]}))]}"
-         local total; total=$(echo "scale=2; ($RANDOM % 2000) + 5.$((RANDOM % 99))" | bc)
+         local total; total=$(awk -v r1="$((RANDOM % 2000))" -v r2="$((RANDOM % 99))" 'BEGIN{printf "%.2f", r1 + 5 + r2/100}')
          local body; body=$(req_body POST "$GATEWAY/api/orders" \
            -H "Content-Type: application/json" \
            -d "{\"userId\":$uid,\"items\":$items,\"total\":$total}")
@@ -289,8 +289,8 @@ phase_ramp_up() {
   while [[ $(date +%s) -lt $end && $(remaining) -gt 0 ]]; do
     normal_traffic
     sleep "$interval"
-    interval=$(echo "scale=1; $interval - 0.1" | bc)
-    [[ $(echo "$interval < 0.3" | bc) -eq 1 ]] && interval=0.3
+    interval=$(awk -v i="$interval" 'BEGIN{printf "%.1f", i - 0.1}')
+    [[ $(awk -v i="$interval" 'BEGIN{print (i < 0.3) ? 1 : 0}') -eq 1 ]] && interval=0.3
   done
   stats_line
 }
@@ -342,7 +342,7 @@ phase_recovery() {
   local end=$(( $(date +%s) + duration ))
   while [[ $(date +%s) -lt $end && $(remaining) -gt 0 ]]; do
     normal_traffic
-    sleep $(echo "scale=1; $NORMAL_INTERVAL * 2" | bc)
+    sleep $(awk -v i="$NORMAL_INTERVAL" 'BEGIN{printf "%.1f", i * 2}')
   done
   stats_line
 }
