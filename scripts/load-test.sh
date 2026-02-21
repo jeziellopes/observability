@@ -236,15 +236,20 @@ error_traffic() {
          -d '{"items":["Item"]}')
        log_err "POST /api/orders missing userId → $status"
        ;;
-    5) # completely wrong endpoint → 404
-       status=$(req GET "$GATEWAY/api/does-not-exist")
-       log_err "GET /api/does-not-exist → $status (404)"
+    5) # non-numeric order ID → parseInt returns NaN → order not found → 404
+       # Reaches the gateway /api/orders/:id handler → requestCounter + errorCounter both fire
+       status=$(req GET "$GATEWAY/api/orders/not-a-number")
+       log_err "GET /api/orders/not-a-number → $status (NaN id, fully instrumented)"
        ;;
-    6) # malformed JSON body
-       status=$(req POST "$GATEWAY/api/users" \
-         -H "Content-Type: application/json" \
-         -d '{invalid json}')
-       log_err "POST /api/users malformed JSON → $status"
+    6) # valid JSON but string total triggers a 500 in order-service → gateway errorCounter fires
+       # Also causes ordersErrors.add(1) + SpanStatusCode.ERROR on the order-service span
+       if [[ ${#USER_IDS[@]} -gt 0 ]]; then
+         local uid="${USER_IDS[$((RANDOM % ${#USER_IDS[@]}))]}"
+         status=$(req POST "$GATEWAY/api/orders" \
+           -H "Content-Type: application/json" \
+           -d "{\"userId\":$uid,\"items\":[\"Broken Item\"],\"total\":\"not-a-number\"}")
+         log_err "POST /api/orders total=string → $status (type error, 5xx)"
+       fi
        ;;
   esac
 }
