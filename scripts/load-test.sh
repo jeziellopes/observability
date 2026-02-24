@@ -87,7 +87,7 @@ inc() { echo $(( $(cat "$TMPDIR_STATS/$1") + 1 )) > "$TMPDIR_STATS/$1"; }
 log_ok()    { echo -e "${GREEN}[OK ]${RESET} $*"; inc ok;    inc total; }
 log_err()   { echo -e "${RED}[ERR]${RESET} $*"; inc err;   inc total; }
 log_info()  { echo -e "${CYAN}[---]${RESET} $*"; }
-log_phase() { echo -e "\n${BOLD}${MAGENTA}╔══ $* ══╗${RESET}\n"; }
+log_phase() { echo -e "\n${BOLD}${MAGENTA}$(banner_line '─' "$*")${RESET}\n"; }
 
 elapsed()  { echo $(( $(date +%s) - START_TIME )); }
 remaining(){ echo $(( DURATION_SECONDS - $(elapsed) )); }
@@ -120,13 +120,28 @@ stats_line() {
     "$((remaining_s / 60))" "$((remaining_s % 60))"
 }
 
-# ─── Box-drawing helpers ───────────────────────────────────────────────────
-# Change BOX_WIDTH to resize every box in the script at once.
+# ─── UI helpers ────────────────────────────────────────────────────────────
+# Change BOX_WIDTH to resize ALL UI elements (boxes, banners, rules) at once.
 BOX_WIDTH=80
 BOX_INNER=$(( BOX_WIDTH - 2 ))        # chars between the two border columns
 BOX_CONTENT=$(( BOX_INNER - 2 ))      # text area (1-space padding on each side)
 
-_box_rule() { printf '%*s' $BOX_INNER '' | tr ' ' '═'; }
+# Repeat CHAR exactly N times (safe for multi-byte UTF-8 chars)
+_repeat() { local char="$1" n="$2"; printf "%.0s${char}" $(seq 1 "$n"); }
+
+# Full-width banner: banner_line CHAR TEXT  (fills BOX_WIDTH, text centered)
+banner_line() {
+  local char="$1" text=" $2 "
+  local len=${#text} lpad rpad
+  lpad=$(( (BOX_WIDTH - len) / 2 ))
+  rpad=$(( BOX_WIDTH - len - lpad ))
+  [[ $lpad -lt 1 ]] && lpad=1
+  [[ $rpad -lt 1 ]] && rpad=1
+  printf '%s%s%s\n' "$(_repeat "$char" "$lpad")" "$text" "$(_repeat "$char" "$rpad")"
+}
+
+# Box components
+_box_rule() { _repeat '═' "$BOX_INNER"; }
 box_top()    { printf '╔%s╗\n' "$(_box_rule)"; }
 box_sep()    { printf '╠%s╣\n' "$(_box_rule)"; }
 box_bot()    { printf '╚%s╝\n' "$(_box_rule)"; }
@@ -448,7 +463,7 @@ echo ""
 CYCLE=1
 while [[ $(remaining) -gt 0 ]]; do
 
-  echo -e "\n${BOLD}${BLUE}━━━ Cycle $CYCLE ━━━━━━━━━━━━━━━━━━━ $(remaining)s remaining ━━━━━━━━${RESET}"
+  echo -e "\n${BOLD}${BLUE}$(banner_line '━' "Cycle $CYCLE — $(remaining)s remaining")${RESET}"
 
   # Ramp up only in the first cycle
   [[ $CYCLE -eq 1 ]] && phase_ramp_up
