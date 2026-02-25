@@ -48,13 +48,21 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
           "custom": { "lineWidth": 2 },
           "unit": "percentunit",
           "max": 1,
           "min": 0
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/^5xx/" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/^4xx/" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }]
+          }
+        ]
       },
         "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
       "id": 3,
@@ -184,7 +192,20 @@
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "thresholds" }, "unit": "short" },
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "orange", "value": 0.95 },
+              { "color": "green",  "value": 0.99 }
+            ]
+          }
+        },
         "overrides": []
       },
       "gridPos": { "h": 5, "w": 6, "x": 18, "y": 18 },
@@ -198,26 +219,11 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "1 - (\n  sum(increase(orders_errors_total[5m]))\n  / clamp_min(sum(increase(orders_created_total[5m])) + sum(increase(orders_errors_total[5m])), 1)\n)",
+          "expr": "sum(rate(http_server_duration_count{job=\"order-service\",http_method=\"POST\",http_status_code=\"201\"}[5m]))\n/ clamp_min(\n  sum(rate(http_server_duration_count{job=\"order-service\",http_method=\"POST\",http_status_code=~\"2..|5..\"}[5m])),\n  1e-9\n)",
           "legendFormat": "Order Success Rate",
           "refId": "A"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "percentunit",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red",    "value": null },
-              { "color": "orange", "value": 0.95 },
-              { "color": "green",  "value": 0.99 }
-            ]
-          }
-        },
-        "overrides": []
-      },
       "title": "Order Success Rate %",
       "type": "stat"
     },
@@ -604,12 +610,12 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "http_server_active_requests{job=~\"api-gateway|user-service|order-service|notification-service\"}",
+          "expr": "process_open_fds{job=~\"api-gateway|user-service|order-service|notification-service\"}",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
-      "title": "Active HTTP Requests per Service",
+      "title": "Open File Descriptors per Service",
       "type": "timeseries"
     },
     {
@@ -717,7 +723,18 @@
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "thresholds" }, "unit": "short" },
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red",    "value": 10 }
+            ]
+          }
+        },
         "overrides": []
       },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 81 },
@@ -824,13 +841,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum(rate(http_client_duration_bucket{job=\"api-gateway\"}[5m])) by (net_peer_name, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(http_client_duration_bucket{job=\"api-gateway\",net_peer_name!=\"jaeger\"}[5m])) by (net_peer_name, le))",
           "legendFormat": "p95 — {{net_peer_name}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum(rate(http_client_duration_bucket{job=\"api-gateway\"}[5m])) by (net_peer_name, le))",
+          "expr": "histogram_quantile(0.50, sum(rate(http_client_duration_bucket{job=\"api-gateway\",net_peer_name!=\"jaeger\"}[5m])) by (net_peer_name, le))",
           "legendFormat": "p50 — {{net_peer_name}}",
           "refId": "B"
         }
@@ -859,7 +876,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(http_client_duration_count{http_status_code=~\"5..\",job=\"api-gateway\"}[1m])) by (net_peer_name)\n/ sum(rate(http_client_duration_count{job=\"api-gateway\"}[1m])) by (net_peer_name)",
+          "expr": "sum(rate(http_client_duration_count{http_status_code=~\"5..\",job=\"api-gateway\",net_peer_name!=\"jaeger\"}[1m])) by (net_peer_name)\n/ sum(rate(http_client_duration_count{job=\"api-gateway\",net_peer_name!=\"jaeger\"}[1m])) by (net_peer_name)",
           "legendFormat": "5xx — {{net_peer_name}}",
           "refId": "A"
         }
@@ -896,7 +913,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "1 - (\n  sum(rate(http_client_duration_count{http_status_code=~\"5..\",job=\"api-gateway\"}[5m])) by (net_peer_name)\n  / sum(rate(http_client_duration_count{job=\"api-gateway\"}[5m])) by (net_peer_name)\n)",
+          "expr": "1 - (\n  sum(rate(http_client_duration_count{http_status_code=~\"5..\",job=\"api-gateway\",net_peer_name!=\"jaeger\"}[5m])) by (net_peer_name)\n  / sum(rate(http_client_duration_count{job=\"api-gateway\",net_peer_name!=\"jaeger\"}[5m])) by (net_peer_name)\n)",
           "legendFormat": "{{net_peer_name}}",
           "refId": "A"
         }
@@ -932,7 +949,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "rate(notifications_sent_total{job=\"notification-service\"}[5m])\n/ clamp_min(rate(notifications_sent_total{job=\"notification-service\"}[5m]) + rate(notifications_failed_total{job=\"notification-service\"}[5m]), 1e-9)",
+          "expr": "sum(rate(notifications_sent_total{job=\"notification-service\"}[5m]))\n/ clamp_min(\n  sum(rate(notifications_sent_total{job=\"notification-service\"}[5m]))\n  + (sum(rate(notifications_failed_total{job=\"notification-service\"}[5m])) or vector(0)),\n  1e-9\n)",
           "legendFormat": "notification success rate",
           "refId": "A"
         }
