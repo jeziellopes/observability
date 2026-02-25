@@ -53,6 +53,9 @@ importers:
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: ^0.45.1
         version: 0.45.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation-runtime-node':
+        specifier: ^0.4.0
+        version: 0.4.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/resources':
         specifier: ^1.19.0
         version: 1.30.1(@opentelemetry/api@1.9.0)
@@ -111,6 +114,9 @@ importers:
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: ^0.45.1
         version: 0.45.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation-runtime-node':
+        specifier: ^0.4.0
+        version: 0.4.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/resources':
         specifier: ^1.19.0
         version: 1.30.1(@opentelemetry/api@1.9.0)
@@ -166,6 +172,9 @@ importers:
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: ^0.45.1
         version: 0.45.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation-runtime-node':
+        specifier: ^0.4.0
+        version: 0.4.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/resources':
         specifier: ^1.19.0
         version: 1.30.1(@opentelemetry/api@1.9.0)
@@ -243,6 +252,9 @@ importers:
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: ^0.45.1
         version: 0.45.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation-runtime-node':
+        specifier: ^0.4.0
+        version: 0.4.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/resources':
         specifier: ^1.19.0
         version: 1.30.1(@opentelemetry/api@1.9.0)
@@ -754,6 +766,10 @@ packages:
     resolution: {integrity: sha512-+9BcqfiEDGPXEIo+o3tso/aqGM5dGbGwAkGVp3FPpZ8GlkK1YlaKRd9gMVyPaeRATwvO5wYGGnCsAc/sMMM9Qw==}
     engines: {node: '>=14'}
 
+  '@opentelemetry/api-logs@0.51.1':
+    resolution: {integrity: sha512-E3skn949Pk1z2XtXu/lxf6QAZpawuTM/IUEXcAzpiUkTd73Hmvw26FiN3cJuTmkpM5hZzHwkomVdtrh/n/zzwA==}
+    engines: {node: '>=14'}
+
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
     engines: {node: '>=8.0.0'}
@@ -1052,6 +1068,12 @@ packages:
     peerDependencies:
       '@opentelemetry/api': ^1.3.0
 
+  '@opentelemetry/instrumentation-runtime-node@0.4.0':
+    resolution: {integrity: sha512-/NOgUF5gf3T5c3GMyy6fnQxaVzbOf9j2xcetgymIIX2HSN3Gk7o64G7KDvwHwhaa20ZiF0QDLb3m4AT+tn9eRg==}
+    engines: {node: '>=14.10.0'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.3.0
+
   '@opentelemetry/instrumentation-socket.io@0.35.0':
     resolution: {integrity: sha512-ED1/Wco05H9fepKqX7n2kONq9EXxkBZTKS29nUH9vVL7wSIT8sBIDqpHz94CnQ8xuicaQQ7c5h9TVuhjtzV43Q==}
     engines: {node: '>=14'}
@@ -1078,6 +1100,12 @@ packages:
 
   '@opentelemetry/instrumentation@0.46.0':
     resolution: {integrity: sha512-a9TijXZZbk0vI5TGLZl+0kxyFfrXHhX6Svtz7Pp2/VBlCSKrazuULEyoJQrOknJyFWNMEmbbJgOciHCCpQcisw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.3.0
+
+  '@opentelemetry/instrumentation@0.51.1':
+    resolution: {integrity: sha512-JIrvhpgqY6437QIqToyozrUG1h5UhwHkaGK/WAX+fkrpyPtc+RO5FkRtUd9BH0MibabHHvqsnBGKfKVijbmp8w==}
     engines: {node: '>=14'}
     peerDependencies:
       '@opentelemetry/api': ^1.3.0
@@ -1732,6 +1760,11 @@ packages:
     peerDependencies:
       acorn: ^8
 
+  acorn-import-attributes@1.9.5:
+    resolution: {integrity: sha512-n02Vykv5uA3eHGM/Z2dQrcD56kL8TyDb2p1+0P83PClMnC/nc+anbQRhIOWnSq4Ke/KvDPrY3C9hDtC/A3eHnQ==}
+    peerDependencies:
+      acorn: ^8
+
   acorn-walk@8.3.5:
     resolution: {integrity: sha512-HEHNfbars9v4pgpW6SO1KSPkfoS0xVOM/9UzkJltjlsHZmJasxg8aXkuZa7SMf8vKGIBhpUsPluQSqhJFCqebw==}
     engines: {node: '>=0.4.0'}
@@ -2287,6 +2320,9 @@ packages:
 
   import-in-the-middle@1.7.1:
     resolution: {integrity: sha512-1LrZPDtW+atAxH42S6288qyDFNQ2YCty+2mxEPRtfazH6Z5QwkaBSTS2ods7hnVJioF6rkRfNoA6A/MstpFXLg==}
+
+  import-in-the-middle@1.7.4:
+    resolution: {integrity: sha512-Lk+qzWmiQuRPPulGQeK5qq0v32k2bHnWrRPFgqyvhw7Kkov5L6MOLOIU3pcWeujc9W4q54Cp3Q2WV16eQkc7Bg==}
 
   import-local@3.2.0:
     resolution: {integrity: sha512-2SPlun1JUPWoM6t3F0dw0FkCF/jWY8kttcY4f599GLTSjh2OCuuhdTkJQsEcZzBqbXZGKMK2OqW1oZsjtf/gQA==}
@@ -4070,6 +4106,10 @@ snapshots:
     dependencies:
       '@opentelemetry/api': 1.9.0
 
+  '@opentelemetry/api-logs@0.51.1':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+
   '@opentelemetry/api@1.9.0': {}
 
   '@opentelemetry/auto-instrumentations-node@0.40.3(@opentelemetry/api@1.9.0)':
@@ -4529,6 +4569,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@opentelemetry/instrumentation-runtime-node@0.4.0(@opentelemetry/api@1.9.0)':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/instrumentation': 0.51.1(@opentelemetry/api@1.9.0)
+    transitivePeerDependencies:
+      - supports-color
+
   '@opentelemetry/instrumentation-socket.io@0.35.0(@opentelemetry/api@1.9.0)':
     dependencies:
       '@opentelemetry/api': 1.9.0
@@ -4569,6 +4616,18 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@types/shimmer': 1.2.0
       import-in-the-middle: 1.7.1
+      require-in-the-middle: 7.5.2
+      semver: 7.7.4
+      shimmer: 1.2.1
+    transitivePeerDependencies:
+      - supports-color
+
+  '@opentelemetry/instrumentation@0.51.1(@opentelemetry/api@1.9.0)':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/api-logs': 0.51.1
+      '@types/shimmer': 1.2.0
+      import-in-the-middle: 1.7.4
       require-in-the-middle: 7.5.2
       semver: 7.7.4
       shimmer: 1.2.1
@@ -5404,6 +5463,10 @@ snapshots:
     dependencies:
       acorn: 8.16.0
 
+  acorn-import-attributes@1.9.5(acorn@8.16.0):
+    dependencies:
+      acorn: 8.16.0
+
   acorn-walk@8.3.5:
     dependencies:
       acorn: 8.16.0
@@ -5998,6 +6061,13 @@ snapshots:
     dependencies:
       acorn: 8.16.0
       acorn-import-assertions: 1.9.0(acorn@8.16.0)
+      cjs-module-lexer: 1.4.3
+      module-details-from-path: 1.0.4
+
+  import-in-the-middle@1.7.4:
+    dependencies:
+      acorn: 8.16.0
+      acorn-import-attributes: 1.9.5(acorn@8.16.0)
       cjs-module-lexer: 1.4.3
       module-details-from-path: 1.0.4
 

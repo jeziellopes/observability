@@ -7,6 +7,7 @@
 // Initialize OpenTelemetry BEFORE importing other modules
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { RuntimeNodeInstrumentation } from '@opentelemetry/instrumentation-runtime-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
 import { Resource } from '@opentelemetry/resources';
@@ -23,7 +24,7 @@ const sdk = new NodeSDK({
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://jaeger:4318/v1/traces',
   }),
   metricReader: prometheusExporter,
-  instrumentations: [getNodeAutoInstrumentations()],
+  instrumentations: [getNodeAutoInstrumentations(), new RuntimeNodeInstrumentation()],
 });
 
 sdk.start();
