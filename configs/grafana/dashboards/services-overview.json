@@ -58,15 +58,25 @@
       },
         "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
       "id": 3,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "sum(rate(http_server_duration_count{http_status_code=~\"5..\",job=~\"api-gateway|user-service|order-service|notification-service\"}[1m])) by (job) / sum(rate(http_server_duration_count{job=~\"api-gateway|user-service|order-service|notification-service\"}[1m])) by (job)",
-          "legendFormat": "{{job}}",
+          "legendFormat": "5xx — {{job}}",
           "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_duration_count{http_status_code=~\"4..\",job=~\"api-gateway|user-service|order-service|notification-service\"}[1m])) by (job) / sum(rate(http_server_duration_count{job=~\"api-gateway|user-service|order-service|notification-service\"}[1m])) by (job)",
+          "legendFormat": "4xx — {{job}}",
+          "refId": "B"
         }
       ],
-      "title": "Error Rate by Service",
+      "title": "4xx vs 5xx Error Rate by Service",
       "type": "timeseries"
     },
     {
@@ -248,6 +258,88 @@
       ],
       "title": "Order Value Distribution",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
+      "id": 12,
+      "title": "Traffic & Error Breakdown — Per Route",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "id": 13,
+      "options": {
+        "footer": { "enablePagination": true },
+        "sortBy": [{ "desc": true, "displayName": "Value" }]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sort_desc(sum(rate(http_server_duration_count{job=~\"api-gateway|user-service|order-service|notification-service\"}[1m])) by (job, http_route))",
+          "legendFormat": "{{job}} — {{http_route}}",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "title": "Top Routes by Traffic",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1 },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "id": 14,
+      "options": {
+        "footer": { "enablePagination": true },
+        "sortBy": [{ "desc": true, "displayName": "Value" }]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sort_desc(\n  sum(rate(http_server_duration_count{http_status_code=~\"5..\",job=~\"api-gateway|user-service|order-service|notification-service\"}[1m])) by (job, http_route)\n  /\n  sum(rate(http_server_duration_count{job=~\"api-gateway|user-service|order-service|notification-service\"}[1m])) by (job, http_route)\n)",
+          "legendFormat": "{{job}} — {{http_route}}",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "title": "Top Routes by Error Rate (5xx)",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2 },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 40 },
+      "id": 15,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_duration_bucket{job=~\"api-gateway|user-service|order-service|notification-service\"}[5m])) by (job, http_route, le))",
+          "legendFormat": "p95 — {{job}} {{http_route}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Latency p95 per Route",
+      "type": "timeseries"
     }
   ],
   "refresh": "10s",
@@ -259,5 +351,5 @@
   "timezone": "browser",
   "title": "Observability Demo - Services",
   "uid": "observability-services",
-  "version": 1
+  "version": 2
 }
