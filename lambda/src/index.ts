@@ -10,7 +10,7 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { AwsInstrumentation } from '@opentelemetry/instrumentation-aws-lambda';
+import { AwsLambdaInstrumentation } from '@opentelemetry/instrumentation-aws-lambda';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 
 // Initialize OpenTelemetry SDK
@@ -26,9 +26,7 @@ const sdk = new NodeSDK({
   }),
   instrumentations: [
     getNodeAutoInstrumentations(),
-    new AwsInstrumentation({
-      suppressInternalInstrumentation: true,
-    }),
+    new AwsLambdaInstrumentation(),
   ],
 });
 
@@ -118,7 +116,7 @@ export const handler = async (
   const tracer = trace.getTracer('order-validator-lambda');
   const span = tracer.startSpan('lambda-handler');
 
-  span.setAttribute('faas.execution', context.requestId);
+  span.setAttribute('faas.execution', context.awsRequestId);
   span.setAttribute('http.method', event.httpMethod);
   span.setAttribute('http.path', event.path);
 
@@ -185,7 +183,7 @@ export const handler = async (
       body: JSON.stringify({
         ...validationResult,
         timestamp: new Date().toISOString(),
-        requestId: context.requestId,
+        requestId: context.awsRequestId,
       }),
     };
   } catch (error) {
