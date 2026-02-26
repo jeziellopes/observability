@@ -442,12 +442,12 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "clamp_min(\n  1 - (\n    sum(increase(http_server_duration_count{http_status_code=~\"5..\",job=~\"api-gateway|user-service|order-service|notification-service\"}[30d])) by (job)\n    / (sum(increase(http_server_duration_count{job=~\"api-gateway|user-service|order-service|notification-service\"}[30d])) by (job) * 0.005)\n  ),\n  0\n)",
+          "expr": "clamp_min(\n  1 - (\n    (\n      sum(rate(http_server_duration_count{http_status_code=~\"5..\",job=~\"api-gateway|user-service|order-service|notification-service\"}[1h])) by (job)\n      or\n      (sum(rate(http_server_duration_count{job=~\"api-gateway|user-service|order-service|notification-service\"}[1h])) by (job) * 0)\n    )\n    / sum(rate(http_server_duration_count{job=~\"api-gateway|user-service|order-service|notification-service\"}[1h])) by (job)\n  ) / 0.005,\n  0\n)",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
-      "title": "Error Budget Remaining (30-day rolling, SLO 99.5 %)",
+      "title": "Error Budget Remaining (current rate vs SLO 99.5 %)",
       "type": "stat"
     },
     {
