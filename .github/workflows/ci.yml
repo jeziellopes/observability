@@ -4,13 +4,13 @@ on:
   push:
     branches: [main, develop]
     paths-ignore:
-      - '**.md'
+      - '**/*.md'
       - '.gitignore'
       - 'LICENSE'
   pull_request:
     branches: [main]
     paths-ignore:
-      - '**.md'
+      - '**/*.md'
       - '.gitignore'
       - 'LICENSE'
 
@@ -70,6 +70,7 @@ jobs:
     name: Docker Compose build
     runs-on: ubuntu-latest
     needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v4
 
