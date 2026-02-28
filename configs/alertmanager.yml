@@ -1,0 +1,60 @@
+global:
+  # Default resolve timeout — how long until Alertmanager marks a firing alert as resolved
+  # if it stops receiving it.
+  resolve_timeout: 5m
+
+# Inhibition rules prevent redundant noise:
+# if a critical alert fires for a job, suppress the matching warning for that same job.
+inhibit_rules:
+  - source_matchers: [severity="critical"]
+    target_matchers: [severity="warning"]
+    equal: [job]
+
+route:
+  # All alerts land here unless a child route matches.
+  receiver: "null"
+  group_by: [alertname, job]
+  group_wait: 30s       # wait to batch alerts in the same group
+  group_interval: 5m    # wait before re-sending an already-firing group
+  repeat_interval: 1h   # re-notify after this long if still firing
+
+  routes:
+    # Critical alerts get their own route — shorter repeat so they aren't missed.
+    - matchers: [severity="critical"]
+      receiver: "null"
+      repeat_interval: 15m
+
+    # SLO-specific alerts
+    - matchers: [slo="availability"]
+      receiver: "null"
+      repeat_interval: 10m
+
+receivers:
+  # "null" receiver — alerts are visible in the Alertmanager UI at :9093 but not forwarded.
+  # Replace with email / Slack / PagerDuty in production by adding a config block here.
+  - name: "null"
+
+  # ── Production receiver examples (commented out) ────────────────────────
+  #
+  # Slack:
+  # - name: slack-ops
+  #   slack_configs:
+  #     - api_url: "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+  #       channel: "#alerts"
+  #       title: '{{ template "slack.default.title" . }}'
+  #       text: '{{ range .Alerts }}{{ .Annotations.description }}{{ "\n" }}{{ end }}'
+  #
+  # PagerDuty:
+  # - name: pagerduty-critical
+  #   pagerduty_configs:
+  #     - routing_key: "<integration-key>"
+  #       severity: '{{ .CommonLabels.severity }}'
+  #
+  # Email:
+  # - name: email-ops
+  #   email_configs:
+  #     - to: "oncall@example.com"
+  #       from: "alertmanager@example.com"
+  #       smarthost: "smtp.example.com:587"
+  #       auth_username: "alertmanager@example.com"
+  #       auth_password: "<password>"
