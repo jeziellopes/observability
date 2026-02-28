@@ -13,7 +13,7 @@ if [ -z "$AWS_ACCOUNT_ID" ] || [ -z "$AWS_REGION" ]; then
   exit 1
 fi
 
-PROJECT_NAME="observability-demo"
+PROJECT_NAME="o11y-lab"
 SERVICES=("api-gateway" "user-service" "order-service" "notification-service")
 ECR_URL="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 

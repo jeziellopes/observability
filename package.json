@@ -1,5 +1,5 @@
 {
-  "name": "observability-demo",
+  "name": "o11y-lab",
   "version": "1.0.0",
   "description": "Microservices observability demonstration with OpenTelemetry",
   "private": true,

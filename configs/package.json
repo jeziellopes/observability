@@ -1,5 +1,5 @@
 {
-  "name": "@observability-demo/configs",
+  "name": "@o11y-lab/configs",
   "version": "1.0.0",
   "description": "Shared configurations for observability demo",
   "main": "otel-config.js",

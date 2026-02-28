@@ -14,7 +14,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "observability-demo"
+      Project     = "o11y-lab"
       Environment = var.environment
       ManagedBy   = "terraform"
     }

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains Terraform configuration for deploying the observability demo to AWS using ECS Fargate, Lambda, and supporting services.
+This directory contains Terraform configuration for deploying the o11y-lab stack to AWS using ECS Fargate, Lambda, and supporting services.
 
 ## Architecture
 
@@ -11,11 +11,11 @@ This directory contains Terraform configuration for deploying the observability 
 | **VPC** | `aws_vpc` | Isolated network with public/private subnets across 2 AZs |
 | **ECS Fargate** | `aws_ecs_cluster` + `aws_ecs_service` | Runs 4 containerized microservices |
 | **Application Load Balancer** | `aws_lb` | Public HTTP entry point on port 80, routes to `api-gateway` |
-| **Service Discovery** | `aws_service_discovery_private_dns_namespace` | Internal DNS (`*.observability-demo.local`) for inter-service communication |
+| **Service Discovery** | `aws_service_discovery_private_dns_namespace` | Internal DNS (`*.o11y-lab.local`) for inter-service communication |
 | **Lambda** | `aws_lambda_function` | Serverless order validation (`order-validator-lambda`) with a public Function URL |
 | **SQS** | `aws_sqs_queue` | Async notification queue consumed by `notification-service` |
 | **ECR** | `aws_ecr_repository` | One repository per service: `api-gateway`, `user-service`, `order-service`, `notification-service` |
-| **CloudWatch Logs** | `aws_cloudwatch_log_group` | Log groups for ECS (`/ecs/observability-demo`) and Lambda (`/aws/lambda/...`), 7-day retention |
+| **CloudWatch Logs** | `aws_cloudwatch_log_group` | Log groups for ECS (`/ecs/o11y-lab`) and Lambda (`/aws/lambda/...`), 7-day retention |
 | **IAM** | `aws_iam_role` | Separate task execution role, task role, and Lambda execution role |
 | **NAT Gateway** | `aws_nat_gateway` | Allows private subnet tasks to reach the internet (e.g. OTel collector) |
 
@@ -153,8 +153,8 @@ terraform destroy
 > ```bash
 > for repo in api-gateway user-service order-service notification-service; do
 >   aws ecr batch-delete-image \
->     --repository-name observability-demo/$repo \
->     --image-ids "$(aws ecr list-images --repository-name observability-demo/$repo \
+>     --repository-name o11y-lab/$repo \
+>     --image-ids "$(aws ecr list-images --repository-name o11y-lab/$repo \
 >       --query 'imageIds[*]' --output json)"
 > done
 > ```

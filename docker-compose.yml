@@ -17,7 +17,7 @@ services:
       - PROMETHEUS_SERVER_URL=http://prometheus:9090
       - PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR=true
     networks:
-      - observability-net
+      - o11y-lab-net
 
   # Prometheus - Metrics Collection
   prometheus:
@@ -35,7 +35,7 @@ services:
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
     networks:
-      - observability-net
+      - o11y-lab-net
 
   # Alertmanager - Alert routing & notification
   alertmanager:
@@ -50,7 +50,7 @@ services:
       - '--storage.path=/alertmanager'
       - '--log.level=warn'
     networks:
-      - observability-net
+      - o11y-lab-net
 
   # Grafana - Metrics Visualization
   grafana:
@@ -70,7 +70,7 @@ services:
       - prometheus
       - loki
     networks:
-      - observability-net
+      - o11y-lab-net
 
   # Loki - Log aggregation backend
   loki:
@@ -83,7 +83,7 @@ services:
       - loki-data:/tmp/loki
     command: -config.file=/etc/loki/loki-config.yml
     networks:
-      - observability-net
+      - o11y-lab-net
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3100/ready || exit 1"]
       interval: 10s
@@ -101,7 +101,7 @@ services:
     depends_on:
       - loki
     networks:
-      - observability-net
+      - o11y-lab-net
 
   # Redis - Message Queue
   redis:
@@ -113,7 +113,7 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - observability-net
+      - o11y-lab-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -140,7 +140,7 @@ services:
       - user-service
       - order-service
     networks:
-      - observability-net
+      - o11y-lab-net
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 10s
@@ -163,7 +163,7 @@ services:
     depends_on:
       - jaeger
     networks:
-      - observability-net
+      - o11y-lab-net
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
       interval: 10s
@@ -192,7 +192,7 @@ services:
       - redis
       - user-service
     networks:
-      - observability-net
+      - o11y-lab-net
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/health"]
       interval: 10s
@@ -219,7 +219,7 @@ services:
       - jaeger
       - redis
     networks:
-      - observability-net
+      - o11y-lab-net
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3003/health"]
       interval: 10s
@@ -244,10 +244,10 @@ services:
       - user-service
       - order-service
     networks:
-      - observability-net
+      - o11y-lab-net
 
 networks:
-  observability-net:
+  o11y-lab-net:
     driver: bridge
 
 volumes:

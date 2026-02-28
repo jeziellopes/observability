@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🧪 Testing Observability Demo Setup"
+echo "🧪 Testing O11y Lab Demo Setup"
 echo "===================================="
 echo ""
 

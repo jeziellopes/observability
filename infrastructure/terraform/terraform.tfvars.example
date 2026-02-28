@@ -3,7 +3,7 @@
 
 aws_region         = "us-east-1"
 environment        = "dev"
-project_name       = "observability-demo"
+project_name       = "o11y-lab"
 vpc_cidr           = "10.0.0.0/16"
 availability_zones = ["us-east-1a", "us-east-1b"]
 container_cpu      = 256

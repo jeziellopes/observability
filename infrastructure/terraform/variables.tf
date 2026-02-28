@@ -13,7 +13,7 @@ variable "environment" {
 variable "project_name" {
   description = "Project name used for resource naming"
   type        = string
-  default     = "observability-demo"
+  default     = "o11y-lab"
 }
 
 variable "vpc_cidr" {

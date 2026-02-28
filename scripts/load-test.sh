@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Long-Running Load Test Script for Observability Demo
+# Long-Running Load Test Script for O11y Lab Demo
 # Generates sustained traffic with error scenarios for Grafana dashboard demos
 #
 # Usage:
@@ -423,7 +423,7 @@ phase_recovery() {
 
 echo -e "${BOLD}${BLUE}"
 box_top
-box_center "Observability Load Test — Demo Mode"
+box_center "O11y Lab Load Test — Demo Mode"
 box_sep
 box_row "Target   : $GATEWAY"
 box_row "$(printf 'Duration : %2d minutes (%5d seconds)' "$DURATION_MINUTES" "$DURATION_SECONDS")"

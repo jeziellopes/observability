@@ -1,13 +1,13 @@
-# Distributed Observability Lab — OTel, Prometheus, Loki, Alertmanager
+# Distributed O11y Lab — OTel, Prometheus, Loki, Alertmanager
 
-![CI](https://github.com/jeziellopes/observability/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/jeziellopes/o11y-lab/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-20-339933?logo=nodedotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-instrumented-f5a800?logo=opentelemetry&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?logo=terraform&logoColor=white)
 
-I built this to get hands-on with the full observability stack — not just traces or just metrics in isolation, but how the three pillars actually connect in a distributed system and where things break down.
+I built this to get hands-on with the full o11y stack — not just traces or just metrics in isolation, but how the three pillars actually connect in a distributed system and where things break down.
 
 The interesting parts were the async queue boundary (OTel has no native mechanism there, so trace context has to be serialized manually into the message payload), the SLO burn rate math in Prometheus, and getting Loki → Grafana → Jaeger linked so a log line's `traceId` takes you directly to the trace.
 

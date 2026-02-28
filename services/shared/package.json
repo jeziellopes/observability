@@ -1,5 +1,5 @@
 {
-  "name": "@observability/shared",
+  "name": "@o11y-lab/shared",
   "version": "1.0.0",
   "description": "Shared utilities (logger, queue transports) for all services",
   "private": true,
