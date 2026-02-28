@@ -79,7 +79,7 @@ graph TB
 Every HTTP hop and queue boundary is captured — including the async Redis/SQS message where I had to manually inject the W3C `traceparent` into the payload. Open `http://localhost:16686` and search for `order-service` to see the full cross-service trace.
 
 ### Metrics (Prometheus + Grafana)
-Services expose `/metrics` via `@opentelemetry/exporter-prometheus` plugged into the OTel SDK's `metricReader`. Jaeger's SPM is wired to Prometheus so you get RED metrics per service directly in the Jaeger UI without a separate pipeline.
+Services expose `/metrics` via `@opentelemetry/exporter-prometheus` plugged into the OTel SDK's `metricReader`. Jaeger's SPM is wired to Prometheus so I get RED metrics per service directly in the Jaeger UI without a separate pipeline.
 
 Auto-instrumentation covers HTTP duration/count/active-requests. On top of that, each service tracks business-level counters and histograms:
 
@@ -109,7 +109,7 @@ All services share a `createLogger(serviceName)` factory that hooks into the act
 
 Set `LOG_LEVEL=debug` (default: `info`) to increase verbosity.
 
-> `OTEL_TRACES_SAMPLER` defaults to `always_on` here — fine for a local demo. In production you'd swap to `parentbased_traceidratio` at something like 10% to avoid the SDK becoming a bottleneck under real load.
+> `OTEL_TRACES_SAMPLER` defaults to `always_on` here — fine for local. In production I'd swap to `parentbased_traceidratio` at something like 10% to avoid the SDK becoming a bottleneck under real load.
 
 ---
 
@@ -289,7 +289,7 @@ docker-compose up --build
 ## Notes
 
 - No auth, plain HTTP, no secret management — this is a local experiment, not a hardened service
-- `LOG_LEVEL=debug` on any service if you want to see the full structured JSON noise
+- `LOG_LEVEL=debug` on any service to see the full structured JSON noise
 
 **Documentation**: [PLAN_SRE.md](PLAN_SRE.md) · [infrastructure/terraform/README.md](infrastructure/terraform/README.md) · [lambda/README.md](lambda/README.md)
 
