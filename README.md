@@ -1,8 +1,12 @@
-# Observability Demo — Microservices with OpenTelemetry
+# Distributed Observability Lab — OTel, Prometheus, Loki, Alertmanager
 
-A portfolio project demonstrating the three pillars of observability — **traces, metrics, and logs** — across a distributed microservices system on AWS.
+![CI](https://github.com/jeziellopes/observability/actions/workflows/ci.yml/badge.svg)
 
-Covers distributed tracing across HTTP services, async queue boundaries, and serverless functions using OpenTelemetry as the single instrumentation layer.
+I built this to get hands-on with the full observability stack — not just traces or just metrics in isolation, but how the three pillars actually connect in a distributed system and where things break down.
+
+The interesting parts were the async queue boundary (OTel has no native mechanism there, so trace context has to be serialized manually into the message payload), the SLO burn rate math in Prometheus, and getting Loki → Grafana → Jaeger linked so a log line's `traceId` takes you directly to the trace.
+
+Runs locally with `docker-compose up`. Deploys to AWS ECS + Lambda via Terraform.
 
 ---
 
@@ -12,7 +16,8 @@ Covers distributed tracing across HTTP services, async queue boundaries, and ser
 |-------|-----------|
 | Tracing | OpenTelemetry + Jaeger |
 | Metrics | Prometheus + Grafana |
-| Logs | Winston + trace correlation |
+| Logs | Loki + Promtail + Winston (structured JSON) |
+| Alerting | Alertmanager (severity routing, inhibition) |
 | Services | TypeScript + Express (×4) + AWS Lambda |
 | Queue | AWS SQS (production) / Redis (local dev) |
 | Infra | Terraform + ECS Fargate + Docker Compose |
@@ -71,14 +76,14 @@ graph TB
 ## Observability Pillars
 
 ### Traces (Jaeger)
-Every HTTP hop and queue boundary is captured. View end-to-end traces at `http://localhost:16686`. See [Trace Propagation](#trace-propagation) below.
+Every HTTP hop and queue boundary is captured — including the async Redis/SQS message where I had to manually inject the W3C `traceparent` into the payload. Open `http://localhost:16686` and search for `order-service` to see the full cross-service trace.
 
 ### Metrics (Prometheus + Grafana)
-All four services expose a `/metrics` endpoint (Prometheus text format) via `@opentelemetry/exporter-prometheus` wired into the OTel SDK's `metricReader`. Jaeger's Service Performance Monitoring (SPM) is enabled with Prometheus as its backend, showing RED metrics (Rate, Errors, Duration) per service directly in the Jaeger UI.
+Services expose `/metrics` via `@opentelemetry/exporter-prometheus` plugged into the OTel SDK's `metricReader`. Jaeger's SPM is wired to Prometheus so you get RED metrics per service directly in the Jaeger UI without a separate pipeline.
 
-**Built-in OTel metrics** (HTTP server duration, request count, active requests) are captured automatically via auto-instrumentation.
+Auto-instrumentation covers HTTP duration/count/active-requests. On top of that, each service tracks business-level counters and histograms:
 
-**Custom business metrics** per service:
+**Custom metrics per service:**
 
 | Metric | Service | Type |
 |--------|---------|------|
@@ -94,8 +99,8 @@ All four services expose a `/metrics` endpoint (Prometheus text format) via `@op
 
 Grafana at `http://localhost:3100` loads a pre-configured dashboard with RED metrics, latency percentiles (p50/p95/p99), and business metric stat panels. Credentials: `admin / admin`.
 
-### Logs (Winston)
-All services use a shared `createLogger(serviceName)` factory from `services/shared/logger`. Every log record is emitted as structured JSON and automatically includes the active span's `traceId` and `spanId`, enabling log–trace correlation in any log aggregation backend (Loki, ELK, CloudWatch).
+### Logs (Winston + Loki)
+All services share a `createLogger(serviceName)` factory that hooks into the active OTel span and injects `traceId`/`spanId` into every log line automatically. Promtail scrapes container stdout, ships to Loki, and Grafana's Loki datasource is configured with a derived field so clicking a `traceId` in the log panel jumps straight to the Jaeger trace.
 
 ```json
 { "level": "info", "message": "Order created", "service": "order-service",
@@ -104,7 +109,7 @@ All services use a shared `createLogger(serviceName)` factory from `services/sha
 
 Set `LOG_LEVEL=debug` (default: `info`) to increase verbosity.
 
-> **Sampling note**: this demo uses the default "always on" sampler — suitable for low-traffic demos. For production, use `ParentBasedSampler` with a `TraceIdRatioBased` sub-sampler (e.g. 10%) to control trace volume and instrumentation overhead.
+> `OTEL_TRACES_SAMPLER` defaults to `always_on` here — fine for a local demo. In production you'd swap to `parentbased_traceidratio` at something like 10% to avoid the SDK becoming a bottleneck under real load.
 
 ---
 
@@ -187,7 +192,7 @@ curl -X POST http://localhost:3000/api/orders \
 open http://localhost:16686
 ```
 
-Service ports: API Gateway `:3000` · User `:3001` · Order `:3002` · Notification `:3003` · Jaeger UI `:16686` · Prometheus `:9090` · Grafana `:3100` (admin/admin)
+Service ports: API Gateway `:3000` · User `:3001` · Order `:3002` · Notification `:3003` · Jaeger UI `:16686` · Prometheus `:9090` · Grafana `:3100` (admin/admin) · Alertmanager `:9093` · Loki `:3110`
 
 ---
 
@@ -266,16 +271,27 @@ cd lambda && npm install && npm run build  # → lambda.zip
 
 ## Demonstration
 
-![Screen](./sample.png)
+```bash
+docker-compose up --build
+./scripts/traffic-simulator.sh   # generates realistic load in the background
+```
+
+| UI | URL | |
+|---|---|---|
+| Jaeger | http://localhost:16686 | trace the full order flow: gateway → order-service → queue → notification-service |
+| Grafana | http://localhost:3100 | RED metrics, p50/p95/p99, SLO error budget panels |
+| Grafana → Explore → Loki | http://localhost:3100 | structured logs — click a `traceId` to jump to Jaeger |
+| Alertmanager | http://localhost:9093 | live alert state; crank up error rate to see it fire |
+| Prometheus | http://localhost:9090/alerts | raw rule evaluation |
 
 ---
 
 ## Notes
 
-- ⚠️ Demo project — no auth, HTTP only, no secret management
-- Set `LOG_LEVEL=debug` in any service for verbose structured JSON logs
+- No auth, plain HTTP, no secret management — this is a local experiment, not a hardened service
+- `LOG_LEVEL=debug` on any service if you want to see the full structured JSON noise
 
-**Documentation**: [PLAN.md](PLAN.md) · [TASKS.md](TASKS.md) · [infrastructure/terraform/README.md](infrastructure/terraform/README.md) · [lambda/README.md](lambda/README.md)
+**Documentation**: [PLAN_SRE.md](PLAN_SRE.md) · [infrastructure/terraform/README.md](infrastructure/terraform/README.md) · [lambda/README.md](lambda/README.md)
 
 ---
 

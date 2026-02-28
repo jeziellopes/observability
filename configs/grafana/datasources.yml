@@ -8,3 +8,35 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
     editable: true
+
+  # Loki — log aggregation. Derived fields link traceId values to Jaeger traces.
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      derivedFields:
+        - name: TraceID
+          matcherRegex: '"traceId":"(\w+)"'
+          url: http://localhost:16686/trace/${__value.raw}
+          datasourceUid: jaeger
+
+  # Jaeger — distributed tracing backend (used as link target from Loki derived fields).
+  - name: Jaeger
+    type: jaeger
+    uid: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: true
+
+  # Alertmanager — exposes alert state queryable from Grafana Alerting menu.
+  - name: Alertmanager
+    type: alertmanager
+    uid: alertmanager
+    access: proxy
+    url: http://alertmanager:9093
+    editable: true
+    jsonData:
+      implementation: prometheus

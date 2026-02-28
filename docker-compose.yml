@@ -37,6 +37,21 @@ services:
     networks:
       - observability-net
 
+  # Alertmanager - Alert routing & notification
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./configs/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--log.level=warn'
+    networks:
+      - observability-net
+
   # Grafana - Metrics Visualization
   grafana:
     image: grafana/grafana:latest
@@ -53,6 +68,38 @@ services:
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
+      - loki
+    networks:
+      - observability-net
+
+  # Loki - Log aggregation backend
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: loki
+    ports:
+      - "3110:3100"
+    volumes:
+      - ./configs/loki/loki-config.yml:/etc/loki/loki-config.yml
+      - loki-data:/tmp/loki
+    command: -config.file=/etc/loki/loki-config.yml
+    networks:
+      - observability-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Promtail - Log collector (tails Docker container stdout/stderr → Loki)
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: promtail
+    volumes:
+      - ./configs/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
     networks:
       - observability-net
 
@@ -207,3 +254,4 @@ volumes:
   redis-data:
   prometheus-data:
   grafana-data:
+  loki-data:

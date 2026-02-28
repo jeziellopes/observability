@@ -1,0 +1,65 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # ── Docker container log discovery ────────────────────────────────────────
+  # Discovers all running containers via the Docker socket, streams their
+  # stdout/stderr, and parses the Winston JSON payload into Loki labels.
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          # Only scrape our microservices — skip infra containers.
+          - name: name
+            values:
+              - api-gateway
+              - user-service
+              - order-service
+              - notification-service
+
+    relabel_configs:
+      # Container name → "container" label (strips leading slash).
+      - source_labels: [__meta_docker_container_name]
+        regex: "/(.*)"
+        target_label: container
+
+      # Compose service name → "service" label.
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+
+      - source_labels: [__meta_docker_container_log_stream]
+        target_label: logstream
+
+    pipeline_stages:
+      # Parse the Winston structured JSON emitted to stdout.
+      - json:
+          expressions:
+            log_level: level
+            log_message: message
+            traceId: traceId
+            spanId: spanId
+            service_name: service
+
+      # Promote log-level and traceId to Loki stream labels so they can be
+      # filtered efficiently without scanning log content.
+      - labels:
+          level: log_level
+          traceId: traceId
+
+      # Replace the raw line with only the message field so the Loki Explore
+      # log panel shows clean text instead of the full JSON blob.
+      - output:
+          source: log_message
+
+      # Drop noisy health-check lines to reduce log volume.
+      - drop:
+          expression: "GET /health"
